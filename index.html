@@ -1,0 +1,83 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Two-Person WebSocket Chat</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        #chat {
+            height: 300px;
+            overflow-y: scroll;
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        #status {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="status">Connecting...</div>
+    <div id="chat"></div>
+    <input type="text" id="messageInput" placeholder="Type a message...">
+    <button onclick="sendMessage()">Send</button>
+
+    <script>
+        const socket = new WebSocket('ws://localhost:8765');
+        const chat = document.getElementById('chat');
+        const messageInput = document.getElementById('messageInput');
+        const status = document.getElementById('status');
+
+        socket.onopen = function() {
+            status.textContent = 'Connected. Waiting for another person...';
+        };
+
+        socket.onmessage = function(event) {
+            if (event.data === "Chat room is full. Please try again later.") {
+                status.textContent = event.data;
+                messageInput.disabled = true;
+                return;
+            }
+            
+            const message = document.createElement('p');
+            message.textContent = "Other: " + event.data;
+            chat.appendChild(message);
+            chat.scrollTop = chat.scrollHeight;
+
+            if (status.textContent !== 'Chat active') {
+                status.textContent = 'Chat active';
+            }
+        };
+
+        function sendMessage() {
+            const message = messageInput.value;
+            if (message) {
+                socket.send(message);
+                const myMessage = document.createElement('p');
+                myMessage.textContent = "You: " + message;
+                chat.appendChild(myMessage);
+                chat.scrollTop = chat.scrollHeight;
+                messageInput.value = '';
+            }
+        }
+
+        messageInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        socket.onclose = function() {
+            status.textContent = 'Disconnected';
+            messageInput.disabled = true;
+        };
+    </script>
+</body>
+</html>
